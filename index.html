@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Affliction Timewalking</title>
+<style>
+:root{--bg:#f4efe4;--card:#fffaf0;--ink:#1d2433;--mute:#667086;--gold:#9a6a10;--line:#d9cfb8;--acc:#2b5aa8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#061529;--card:#0d2442;--ink:#e8edf6;--mute:#8fa2c0;--gold:#e5b94c;--line:#1e3a63;--acc:#6aa5ff}}
+:root[data-theme="dark"]{--bg:#061529;--card:#0d2442;--ink:#e8edf6;--mute:#8fa2c0;--gold:#e5b94c;--line:#1e3a63;--acc:#6aa5ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,'Times New Roman',serif;line-height:1.5}
+header{text-align:center;padding:48px 20px 24px}
+h1{font-size:clamp(2rem,6vw,3.2rem);margin:0;color:var(--gold);letter-spacing:.03em}
+.sub{color:var(--mute);margin:8px auto 0;max-width:560px}
+.tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:24px 0 8px;padding:0 12px}
+.tabs button{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:8px 16px;cursor:pointer}
+.tabs button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);font-weight:bold}
+.stats{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:16px 12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 20px;text-align:center;min-width:110px}
+.stat b{display:block;font-size:1.5rem;color:var(--gold)}
+.stat span{font-size:.8rem;color:var(--mute)}
+main{max-width:760px;margin:0 auto;padding:16px 16px 64px}
+.era{margin:40px 0 12px;display:flex;align-items:baseline;gap:12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.era h2{margin:0;color:var(--gold);font-size:1.4rem}
+.era small{color:var(--mute)}
+.tl{border-left:2px solid var(--line);margin-left:8px;padding-left:20px}
+.tier{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:14px 0}
+.tier::before{content:"";position:absolute;left:-29px;top:20px;width:12px;height:12px;border-radius:50%;background:var(--line);border:2px solid var(--bg)}
+.tier.done::before{background:var(--gold)}
+.tier h3{margin:0;font-size:1.1rem}
+.bosses{color:var(--mute);font-size:.85rem;margin:2px 0 8px}
+.meta{display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem}
+.meta div span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+.empty{color:var(--mute);font-style:italic}
+.note{margin-top:8px;font-size:.9rem}
+.hint{max-width:640px;margin:0 auto;text-align:center;color:var(--mute);font-size:.85rem;padding:0 16px}
+code{background:var(--card);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.achs{max-width:760px;margin:28px auto 0;padding:0 16px}
+.achs h2{color:var(--gold);font-size:1.4rem;margin:0 0 12px}
+.achs h2 small{color:var(--mute);font-size:.9rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.a{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;opacity:.5;font-size:.9rem}
+.a.on{opacity:1;border-color:var(--gold)}
+.a b{display:block;margin-bottom:2px}
+.a small{display:block;color:var(--mute)}
+.a em{display:block;margin-top:4px;color:var(--gold);font-size:.8rem}
+</style>
+</head>
+<body>
+<header>
+<h1>Affliction Timewalking</h1>
+<p class="sub">Six years of raiding, from Molten Core to Siege of Orgrimmar. Choose a guild to follow its journey.</p>
+<div class="tabs" id="tabs"></div>
+</header>
+<div class="stats" id="stats"></div>
+<p class="hint">Source: Warcraft Logs. Each date is the guild’s first boss kill in that tier; each rank is its best realm progress rank for the tier.</p>
+<section class="achs" id="achs"></section>
+<main id="main"></main>
+
+<script>
+// ---- YOUR DATA: fill in per guild, per tier id (see TIERS below) ----
+// Example: mc: {kill:"2020-03-14", rank:"Realm #3", note:"First clear on Arugal."}
+const GUILDS = {
+  "redux":  {name:"Affliction Redux", realm:"Arugal",    data:{
+    mc:{kill:"2020-01-22"},
+    bwl:{kill:"2020-02-16"},
+    zg:{kill:"2020-04-16"},
+    aq:{kill:"2020-09-20"},
+    naxx:{kill:"2020-12-06"},
+    kara:{kill:"2021-06-13"},
+    ssc:{kill:"2021-09-16"},
+    bt:{kill:"2022-01-30"},
+    swp:{kill:"2022-05-15"},
+    nax2:{kill:"2022-10-07", rank:"Realm #390"},
+    uld:{kill:"2023-01-21", rank:"Realm #169"},
+    toc:{kill:"2023-06-23", rank:"Realm #71"},
+    icc:{kill:"2023-10-13", rank:"Realm #102"},
+    bwd:{kill:"2024-06-02", rank:"Realm #100"},
+    fl:{kill:"2024-11-10", rank:"Realm #50"},
+    ds:{kill:"2025-02-23", rank:"Realm #31"},
+    msv:{kill:"2025-08-03", rank:"Realm #65"},
+    tot:{kill:"2025-12-14", rank:"Realm #35"},
+    soo:{kill:"2026-06-07", rank:"Realm #26"}
+  }}
+};
+
+const ERAS = [
+  {name:"Classic", years:"2019 – 2021", tiers:[
+    {id:"mc",   t:"Molten Core & Onyxia", b:"Ragnaros, Onyxia"},
+    {id:"bwl",  t:"Blackwing Lair",       b:"Nefarian"},
+    {id:"zg",   t:"Zul’Gurub & Ruins of Ahn’Qiraj", b:"Hakkar, Ossirian"},
+    {id:"aq",   t:"Temple of Ahn’Qiraj",  b:"C’Thun"},
+    {id:"naxx", t:"Naxxramas",            b:"Kel’Thuzad"}
+  ]},
+  {name:"The Burning Crusade", years:"2021 – 2022", tiers:[
+    {id:"kara", t:"Karazhan, Gruul & Magtheridon", b:"Prince Malchezaar, Gruul, Magtheridon"},
+    {id:"ssc",  t:"Serpentshrine & Tempest Keep", b:"Lady Vashj, Kael’thas"},
+    {id:"bt",   t:"Hyjal & Black Temple",  b:"Archimonde, Illidan"},
+    {id:"swp",  t:"Sunwell Plateau",       b:"Kil’jaeden"}
+  ]},
+  {name:"Wrath of the Lich King", years:"2022 – 2023", tiers:[
+    {id:"nax2", t:"Naxxramas, Eye of Eternity & Obsidian Sanctum", b:"Kel’Thuzad, Malygos, Sartharion"},
+    {id:"uld",  t:"Ulduar",                b:"Yogg-Saron"},
+    {id:"toc",  t:"Trial of the Crusader & Onyxia", b:"Anub’arak"},
+    {id:"icc",  t:"Icecrown Citadel & Ruby Sanctum", b:"The Lich King, Halion"}
+  ]},
+  {name:"Cataclysm", years:"2024 – 2025", tiers:[
+    {id:"bwd",  t:"Blackwing Descent, Bastion of Twilight & Throne of the Four Winds", b:"Nefarian, Sinestra, Al’Akir"},
+    {id:"fl",   t:"Firelands",             b:"Ragnaros"},
+    {id:"ds",   t:"Dragon Soul",           b:"Deathwing"}
+  ]},
+  {name:"Mists of Pandaria", years:"2025 – 2026", tiers:[
+    {id:"msv",  t:"Mogu’shan Vaults, Heart of Fear & Terrace of Endless Spring", b:"Elegon, Garalon, Tsulong"},
+    {id:"tot",  t:"Throne of Thunder",     b:"Ra-den"},
+    {id:"soo",  t:"Siege of Orgrimmar",    b:"Garrosh Hellscream"}
+  ]}
+];
+
+let current = "redux";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderAch(d){
+  const has=id=>!!(d[id]&&d[id].kill);
+  const tiers=ERAS.flatMap(e=>e.tiers);
+  const rk=id=>{const m=d[id]&&d[id].rank&&/(\d+)/.exec(d[id].rank);return m?+m[1]:null};
+  const ranks=tiers.map(t=>rk(t.id)).filter(n=>n!==null);
+  const best=ranks.length?Math.min(...ranks):null;
+  const got=tiers.filter(t=>has(t.id));
+  let fast=null;
+  for(let i=1;i<got.length;i++){const g=Math.round((new Date(d[got[i].id].kill)-new Date(d[got[i-1].id].kill))/864e5);if(!fast||g<fast.g)fast={g};}
+  const nEra=ERAS.filter(e=>e.tiers.some(t=>has(t.id))).length;
+  const top=(n,i,name)=>({i,n:name,d:'Finish a tier in the realm top '+n+'.',ok:best!==null&&best<=n,x:best?'Best: Realm #'+best:''});
+  const A=[
+    {i:'🔥',n:'Opening Night',d:'Clear Molten Core.',ok:has('mc'),x:has('mc')?'Cleared '+d.mc.kill:''},
+    ...ERAS.map(e=>{const c=e.tiers.filter(t=>has(t.id)).length;return {i:'🏆',n:e.name+' Complete',d:'Record every tier in '+e.name+'.',ok:c===e.tiers.length,p:c+'/'+e.tiers.length}}),
+    {i:'🌍',n:'Across the Ages',d:'Clear raids in all five expansions.',ok:nEra===ERAS.length,p:nEra+'/'+ERAS.length},
+    {i:'⚔️',n:'Veteran',d:'Record 10 raid tiers.',ok:got.length>=10,p:got.length+'/10'},
+    {i:'⚡',n:'Back to Back',d:'Clear two tiers within 30 days of each other.',ok:!!fast&&fast.g<=30,x:fast?'Fastest gap: '+fast.g+' days':''},
+    {i:'👑',n:'Garrosh Down',d:'Clear Siege of Orgrimmar.',ok:has('soo'),x:has('soo')?'Cleared '+d.soo.kill:''},
+    {i:'📈',n:'Climbing the Ladder',d:'Improve your realm rank by 100 places.',ok:ranks.length>1&&ranks[0]-best>=100,x:ranks.length>1?'Realm #'+ranks[0]+' to #'+best:''},
+    top(50,'🥉','Top 50 on the Realm'),
+    top(30,'🥈','Top 30 on the Realm'),
+    top(10,'🥇','Top 10 on the Realm')
+  ];
+  const n=A.filter(a=>a.ok).length;
+  $('achs').innerHTML=`<h2>Achievements <small>${n}/${A.length}</small></h2><div class="grid">`+A.map(a=>`<div class="a ${a.ok?'on':''}"><b>${a.i} ${esc(a.n)}</b><small>${esc(a.d)}</small>${a.ok?(a.x?`<em>${esc(a.x)}</em>`:''):(a.p?`<em>Progress ${a.p}</em>`:'')}</div>`).join('')+'</div>';
+}
+
+function render(){
+  $("tabs").innerHTML = Object.entries(GUILDS).map(([k,g]) =>
+    `<button data-k="${k}" aria-pressed="${k===current}">${esc(g.name)} · ${esc(g.realm)}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => { current = b.dataset.k; render(); });
+
+  const g = GUILDS[current], d = g.data;
+  const all = ERAS.flatMap(e => e.tiers);
+  const done = all.filter(t => d[t.id] && d[t.id].kill).length;
+  const first = all.map(t => d[t.id] && d[t.id].kill).filter(Boolean).sort()[0];
+  $("stats").innerHTML =
+    `<div class="stat"><b>${done}/${all.length}</b><span>tiers recorded</span></div>` +
+    `<div class="stat"><b>${first ? first.slice(0,4) : "—"}</b><span>first kill logged</span></div>` +
+    `<div class="stat"><b>${esc(g.realm)}</b><span>realm</span></div>`;
+
+  renderAch(d);
+  $("main").innerHTML = ERAS.map(e => `
+    <div class="era"><h2>${esc(e.name)}</h2><small>${esc(e.years)}</small></div>
+    <div class="tl">${e.tiers.map(t => {
+      const r = d[t.id] || {};
+      return `<div class="tier ${r.kill ? "done" : ""}">
+        <h3>${esc(t.t)}</h3><div class="bosses">${esc(t.b)}</div>
+        ${r.kill || r.rank
+          ? `<div class="meta"><div><span>Cleared</span>${esc(r.kill || "—")}</div><div><span>Rank</span>${esc(r.rank || "—")}</div></div>`
+          : `<div class="empty">No results added yet.</div>`}
+        ${r.note ? `<div class="note">${esc(r.note)}</div>` : ""}
+      </div>`;}).join("")}</div>`).join("");
+}
+render();
+</script>
+</body>
+</html>
